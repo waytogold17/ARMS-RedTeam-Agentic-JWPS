@@ -102,3 +102,41 @@ def test_ai_data_governance_finding(tmp_path):
     assert "absence de versionnage" in finding["evidence"]
     assert "avant =" in finding["evidence"]
     assert "après =" in finding["evidence"]
+
+def test_dora_detection_finds_undetected_attack():
+    from types import SimpleNamespace
+    from redteam.agents.compliance import check_dora_detection
+
+    snapshot = {"monitoring_events": []}
+    results = {
+        "Attaquant": SimpleNamespace(data={
+            "runs": [{"scenario": "A1", "detected": False}]
+        }),
+        "IA Adversaire": SimpleNamespace(data={
+            "runs": [{"scenario": "B1", "detected": True}]
+        }),
+    }
+
+    finding = check_dora_detection(snapshot, results)
+
+    assert finding is not None
+    assert finding.id == "DORA-10"
+    assert finding.severity == "Critique"
+    assert finding.linked_scenarios == ["A1"]
+    assert "ouverture d'incident non vérifiable" in finding.evidence
+
+
+def test_dora_detection_no_finding_when_detected():
+    from types import SimpleNamespace
+    from redteam.agents.compliance import check_dora_detection
+
+    snapshot = {"monitoring_events": []}
+    results = {
+        "Attaquant": SimpleNamespace(data={
+            "runs": [{"scenario": "A1", "detected": True}]
+        }),
+    }
+
+    finding = check_dora_detection(snapshot, results)
+
+    assert finding is None

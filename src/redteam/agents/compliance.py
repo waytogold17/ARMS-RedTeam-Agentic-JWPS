@@ -121,6 +121,45 @@ def check_ai_data_governance(snapshot, results):
         ),
     )
 
+def check_dora_detection(snapshot, results):
+    undetected = []
+
+    for agent_name in ("Attaquant", "IA Adversaire"):
+        agent_result = results.get(agent_name)
+        if agent_result is None:
+            continue
+
+        for run in agent_result.data["runs"]:
+            if run.get("detected") is False:
+                undetected.append(run["scenario"])
+
+    if not undetected:
+        return None
+
+    scenarios = sorted(set(undetected))
+    event_count = len(snapshot["monitoring_events"])
+
+    return Finding(
+        id="DORA-10",
+        regulation="DORA",
+        reference="art. 10 et 17 — détection et gestion des incidents",
+        title="Scénarios d'attaque non détectés",
+        evidence=(
+            f"{len(scenarios)} scénario(s) déclaré(s) non détecté(s) : "
+            f"{', '.join(scenarios)}. "
+            f"Événements de surveillance présents : {event_count}. "
+            "Aucun registre d'incidents fourni dans le snapshot : "
+            "ouverture d'incident non vérifiable."
+        ),
+        severity="Critique",
+        linked_scenarios=scenarios,
+        recommendation=(
+            "Ajouter des mécanismes de détection adaptés aux scénarios, "
+            "relier les alertes aux attaques et tracer la qualification "
+            "ainsi que le traitement des incidents."
+        ),
+    )
+
 #  TODO Paul (voir docs/AGENT4_GUIDE.md) :
 #   check_ai_data_governance  (AI Act art. 10/15 : réentraînement sans validation, résultat B2)
 #   check_human_oversight      (AI Act art. 14 : blocage automatique, revue des seules alertes)
@@ -132,6 +171,7 @@ CHECKS = [
     check_mica_custody,
     check_ai_traceability,
     check_ai_data_governance,
+    check_dora_detection,
 ]
 
 
