@@ -1,3 +1,31 @@
+# 🎬 Vidéo de démonstration
+
+**[▶ Voir la vidéo de démo (WeTransfer)](https://wetransfer.com/downloads/9dcd5468498a488a9eb69c92492b2ef520261114144556/9deca5184e56c5386ed181c1f3d976d920261114144709/510368?t_exp=1794926756&t_lsid=36662a98-495c-4fe6-ae1b-5316d2c59b45&t_network=email&t_rid=ZW1haWx8YWRyb2l0fGMzNGI0NmRlLWE4OWUtNGI4Ny05N2E1LWY0MmM1NTJmZTY4Yw%3D%3D&t_s=download_link&t_ts=1794667556&utm_source=wt_sendgrid&utm_medium=email&utm_campaign=TRN_DL_WTP_01&trk=TRN_DL_WTP_01)**
+
+> ⏳ Lien WeTransfer valable jusqu'au **mardi 17 novembre 2026, 15 h 45 (heure de Paris)**. Passé cette date, la démo se rejoue en 5 secondes : `pip install -e ".[dev]" && redteam run --offline`.
+
+## Ce que montre la vidéo
+
+| Moment | Ce qu'on voit |
+|---|---|
+| 1 | Architecture de la Red Team : 5 agents Agno orchestrés contre ARMS simulé |
+| 2 | `redteam run` avec le LLM (OpenRouter `gpt-4o-mini`) : chaque agent affiche son analyse |
+| 3 | Agent Reconnaissance : 6 vecteurs d'entrée, 2 dépendances critiques |
+| 4 | Agents Attaquant et IA Adversaire : prix crypto falsifié (432 000 €), évasion du modèle (40/40), empoisonnement (corridor AE 100 % → 80 %), **0 alerte d'ARMS** |
+| 5 | Agent Compliance Breaker : 6 constats DORA, MiCA, AI Act, RGPD avec preuve et correctif |
+| 6 | Agent Impact & Risk : score global **0,80 (Élevé)** et classement des failles |
+| 7 | Rapport Markdown généré et `redteam verify-log` (journal de campagne intègre) |
+
+## Rejouer la démo soi-même
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+redteam run --offline          # sans clé, narration hors-ligne
+# avec LLM : OPENROUTER_API_KEY dans .env (voir .env.example), puis
+redteam run
+```
+
 # ARMS Red Team — Red Team agentique (5 agents)
 
 Red Team de **5 agents IA autonomes** ([Agno](https://docs.agno.com)) qui éprouvent la résilience d'**ARMS** (*Agentic Risk Monitoring System*) avant sa mise en production, au regard de **DORA, MiCA et de l'AI Act**.
