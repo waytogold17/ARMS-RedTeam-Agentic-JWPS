@@ -72,13 +72,67 @@ def check_ai_traceability(snapshot, results):
                    "Journaliser pour CHAQUE décision : entrées, score, règles, version du modèle, justification lisible")
 
 
-# TODO Paul-Edmond (voir docs/AGENT4_GUIDE.md) :
+def check_ai_data_governance(snapshot, results):
+    retraining = snapshot["config"]["retraining"]
+    issues = []
+
+    if not retraining["human_validation"]:
+        issues.append("réentraînement sans validation humaine")
+
+    if not retraining["model_versioning"]:
+        issues.append("absence de versionnage du modèle")
+
+    if not issues:
+        return None
+
+    adversary = results.get("IA Adversaire")
+    attack = None
+
+    if adversary is not None:
+        attack = next(
+            (run for run in adversary.data["runs"]
+             if run["scenario"] == "B2"),
+            None,
+        )
+
+    linked_scenarios = []
+
+    if attack is not None:
+        before = attack["recall_before"]["corridor_AE"]
+        after = attack["recall_after"]["corridor_AE"]
+        issues.append(
+            f"B2 : détection des fraudes du corridor AE "
+            f"avant = {before:.1%}, après = {after:.1%}"
+        )
+        linked_scenarios.append("B2")
+
+    return Finding(
+        id="AIACT-10",
+        regulation="AI Act",
+        reference="art. 10 et 15 — applicabilité à confirmer selon la classification",
+        title="Réentraînement du modèle insuffisamment encadré",
+        evidence=" ; ".join(issues),
+        severity="Critique",
+        linked_scenarios=linked_scenarios,
+        recommendation=(
+            "Valider les données de réentraînement, exiger une approbation "
+            "humaine, versionner le modèle et vérifier ses performances "
+            "avant activation, avec possibilité de retour arrière."
+        ),
+    )
+
+#  TODO Paul (voir docs/AGENT4_GUIDE.md) :
 #   check_ai_data_governance  (AI Act art. 10/15 : réentraînement sans validation, résultat B2)
 #   check_human_oversight      (AI Act art. 14 : blocage automatique, revue des seules alertes)
 #   check_rgpd_minimisation    (RGPD art. 5.1.c et 32 : IBAN et nom en clair, aucune durée de conservation)
 #   check_dora_detection       (DORA art. 10 et 17 : attaques non détectées, aucun incident ouvert)
 #   check_ai_act_classification (AI Act annexe III 5(b) : exclusion « détection de fraude », à justifier)
-CHECKS = [check_dora_third_party, check_mica_custody, check_ai_traceability]
+CHECKS = [
+    check_dora_third_party,
+    check_mica_custody,
+    check_ai_traceability,
+    check_ai_data_governance,
+]
 
 
 class ComplianceBreakerAgent(RedTeamAgent):

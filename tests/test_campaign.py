@@ -83,3 +83,22 @@ def test_llm_plans_are_constrained_by_guardrails(tmp_path, monkeypatch):
     assert c["results"]["IA Adversaire"]["data"]["plan"] == ["B1", "B2"]               # ordre imposé
     assert all(v["engine"] == "mock" for v in c["results"].values())
     assert len(calls) == 7
+
+def test_ai_data_governance_finding(tmp_path):
+    from redteam import orchestrator
+
+    campaign = orchestrator.run_campaign(tmp_path, offline=True)
+    findings = campaign["results"]["Compliance Breaker"]["data"]["findings"]
+
+    finding = next(
+        (item for item in findings if item["id"] == "AIACT-10"),
+        None,
+    )
+
+    assert finding is not None
+    assert finding["severity"] == "Critique"
+    assert "B2" in finding["linked_scenarios"]
+    assert "sans validation humaine" in finding["evidence"]
+    assert "absence de versionnage" in finding["evidence"]
+    assert "avant =" in finding["evidence"]
+    assert "après =" in finding["evidence"]
