@@ -160,6 +160,41 @@ def check_dora_detection(snapshot, results):
         ),
     )
 
+def check_rgpd_minimisation(snapshot, results):
+    log = snapshot["decision_log"]
+    config = snapshot["config"]["decision_log"]
+    issues = []
+
+    iban_count = sum(1 for entry in log if entry.get("iban"))
+    name_count = sum(1 for entry in log if entry.get("holder_name"))
+
+    if not config["pseudonymised"]:
+        if iban_count:
+            issues.append(f"{iban_count} entrée(s) contenant un IBAN en clair")
+        if name_count:
+            issues.append(f"{name_count} entrée(s) contenant un nom en clair")
+
+    if config["retention_days"] is None:
+        issues.append("aucune durée de conservation configurée")
+
+    if not issues:
+        return None
+
+    return Finding(
+        id="RGPD-5",
+        regulation="RGPD",
+        reference="art. 5(1)(c) et 5(1)(e) — minimisation et conservation",
+        title="Données personnelles et conservation du journal à encadrer",
+        evidence=" ; ".join(issues),
+        severity="Haute",
+        linked_scenarios=[],
+        recommendation=(
+            "Justifier les données nécessaires au journal, supprimer ou "
+            "pseudonymiser les identifiants inutiles, définir une durée "
+            "de conservation justifiée et automatiser la purge."
+        ),
+    )
+
 #  TODO Paul (voir docs/AGENT4_GUIDE.md) :
 #   check_ai_data_governance  (AI Act art. 10/15 : réentraînement sans validation, résultat B2)
 #   check_human_oversight      (AI Act art. 14 : blocage automatique, revue des seules alertes)
@@ -172,6 +207,7 @@ CHECKS = [
     check_ai_traceability,
     check_ai_data_governance,
     check_dora_detection,
+    check_rgpd_minimisation,
 ]
 
 
