@@ -83,3 +83,104 @@ def test_llm_plans_are_constrained_by_guardrails(tmp_path, monkeypatch):
     assert c["results"]["IA Adversaire"]["data"]["plan"] == ["B1", "B2"]               # ordre imposé
     assert all(v["engine"] == "mock" for v in c["results"].values())
     assert len(calls) == 7
+
+def test_ai_data_governance_finding(tmp_path):
+    from redteam import orchestrator
+
+    campaign = orchestrator.run_campaign(tmp_path, offline=True)
+    findings = campaign["results"]["Compliance Breaker"]["data"]["findings"]
+
+    finding = next(
+        (item for item in findings if item["id"] == "AIACT-10"),
+        None,
+    )
+
+    assert finding is not None
+    assert finding["severity"] == "Critique"
+    assert "B2" in finding["linked_scenarios"]
+    assert "sans validation humaine" in finding["evidence"]
+    assert "absence de versionnage" in finding["evidence"]
+    assert "avant =" in finding["evidence"]
+    assert "après =" in finding["evidence"]
+
+def test_dora_detection_finds_undetected_attack():
+    from types import SimpleNamespace
+    from redteam.agents.compliance import check_dora_detection
+
+    snapshot = {"monitoring_events": []}
+    results = {
+        "Attaquant": SimpleNamespace(data={
+            "runs": [{"scenario": "A1", "detected": False}]
+        }),
+        "IA Adversaire": SimpleNamespace(data={
+            "runs": [{"scenario": "B1", "detected": True}]
+        }),
+    }
+
+    finding = check_dora_detection(snapshot, results)
+
+    assert finding is not None
+    assert finding.id == "DORA-10"
+    assert finding.severity == "Critique"
+    assert finding.linked_scenarios == ["A1"]
+    assert "ouverture d'incident non vérifiable" in finding.evidence
+
+
+def test_dora_detection_no_finding_when_detected():
+    from types import SimpleNamespace
+    from redteam.agents.compliance import check_dora_detection
+
+    snapshot = {"monitoring_events": []}
+    results = {
+        "Attaquant": SimpleNamespace(data={
+            "runs": [{"scenario": "A1", "detected": True}]
+        }),
+    }
+
+    finding = check_dora_detection(snapshot, results)
+
+    assert finding is None
+
+def test_rgpd_minimisation_finds_exposed_data():
+    from redteam.agents.compliance import check_rgpd_minimisation
+
+    snapshot = {
+        "config": {
+            "decision_log": {
+                "pseudonymised": False,
+                "retention_days": None,
+            }
+        },
+        "decision_log": [
+            {"iban": "IBAN-FICTIF-TEST", "holder_name": "PERSONNE-FICTIVE"}
+        ],
+    }
+
+    finding = check_rgpd_minimisation(snapshot, {})
+
+    assert finding is not None
+    assert finding.id == "RGPD-5"
+    assert finding.severity == "Haute"
+    assert "1 entrée(s) contenant un IBAN en clair" in finding.evidence
+    assert "1 entrée(s) contenant un nom en clair" in finding.evidence
+    assert "aucune durée de conservation" in finding.evidence
+    assert "IBAN-FICTIF-TEST" not in finding.evidence
+    assert "PERSONNE-FICTIVE" not in finding.evidence
+
+
+def test_rgpd_minimisation_no_finding_without_issues():
+    from redteam.agents.compliance import check_rgpd_minimisation
+
+    snapshot = {
+        "config": {
+            "decision_log": {
+                "pseudonymised": True,
+                "retention_days": 30,
+            }
+        },
+        "decision_log": [{"decision": "ACCEPTÉE"}],
+    }
+
+    finding = check_rgpd_minimisation(snapshot, {})
+
+    assert finding is None
