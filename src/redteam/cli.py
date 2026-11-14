@@ -46,8 +46,20 @@ def cmd_verify(args) -> int:
     console.print(f"Journal {'intègre' if ok else 'ALTÉRÉ'} ({n} entrées vérifiées)")
     return 0 if ok else 1
 
+def _load_dotenv(path: Path = Path(".env")) -> None:
+    """Charge .env sans écraser les variables déjà définies (clé jamais affichée)."""
+    if not path.is_file():
+        return
+    import os
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            key, value = line.split("=", 1)
+            if value.strip():
+                os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 def main(argv=None) -> int:
+    _load_dotenv()
     p = argparse.ArgumentParser(prog="redteam", description="Red Team agentique contre ARMS (simulation)")
     sub = p.add_subparsers(dest="cmd", required=True)
     r = sub.add_parser("run", help="lancer la campagne complète (5 agents)")
